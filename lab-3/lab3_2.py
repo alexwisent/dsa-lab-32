@@ -1,73 +1,115 @@
-
-
-import random
 import requests
+import random
+
+# Базовый URL API (локальный сервер Flask)
+BASE_URL = "http://127.0.0.1:5000"
 
 
-BASE_URL = "http://127.0.0.1:5000/number/"
+# =========================
+# ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+# =========================
+
+def get_random():
+    """Генерация случайного целого числа от 1 до 10."""
+    return random.randint(1, 10)
 
 
-def apply_operation(a, b, operation):
-    """Выполнение операции"""
-    if operation == "sum":
+def apply_operation(a, op, b):
+    """
+    Выполнение арифметической операции между двумя числами.
+
+    :param a: первое число
+    :param op: операция (sum, sub, mul, div)
+    :param b: второе число
+    :return: результат вычисления
+    """
+    if op == "sum":
         return a + b
-    if operation == "sub":
+    if op == "sub":
         return a - b
-    if operation == "mul":
+    if op == "mul":
         return a * b
-    if operation == "div":
+    if op == "div":
         return a / b if b != 0 else 0
 
-
-# -------- 1. GET --------
-param = random.randint(1, 10)
-
-get_response = requests.get(BASE_URL, params={"param": param})
-get_data = get_response.json()
-
-print("GET response:", get_data)
-
-result_1 = get_data["result"]
+    # Если пришла неизвестная операция — ошибка
+    raise ValueError(f"Unknown operation: {op}")
 
 
-# -------- 2. POST --------
-json_param = random.randint(1, 10)
+# =========================
+# 1) GET /number
+# =========================
 
+# Генерация случайного параметра для GET запроса
+param = get_random()
+
+# Отправка GET запроса с query-параметром
+res_get = requests.get(
+    f"{BASE_URL}/number/",
+    params={"param": param}
+)
+
+# Получение JSON-ответа
+data_get = res_get.json()
+
+print("GET response:", data_get)
+
+# Извлекаем результат и операцию из ответа
+a = float(data_get["result"])
+op1 = data_get["operation"]
+
+
+# =========================
+# 2) POST /number
+# =========================
+
+# Генерация случайного значения для JSON тела
+json_param = get_random()
+
+# Отправка POST запроса
 post_response = requests.post(
-    BASE_URL,
+    f"{BASE_URL}/number/",
     json={"jsonParam": json_param}
 )
-post_data = post_response.json()
 
-print("POST response:", post_data)
+# Получение ответа
+data_post = post_response.json()
 
-result_2 = post_data["result"]
+print("POST response:", data_post)
 
-
-# -------- 3. DELETE --------
-delete_response = requests.delete(BASE_URL)
-delete_data = delete_response.json()
-
-print("DELETE response:", delete_data)
-
-# для DELETE у тебя 2 числа → нужно применить операцию
-result_3 = apply_operation(
-    delete_data["first_number"],
-    delete_data["second_number"],
-    delete_data["operation"]
-)
+# Извлечение данных
+b = float(data_post["result"])
+op2 = data_post["operation"]
 
 
-# -------- 4. Итоговое выражение --------
-# выполняем последовательно: ((result_1 OP result_2) OP result_3)
+# =========================
+# 3) DELETE /number
+# =========================
 
-# сначала операция из POST
-intermediate = apply_operation(result_1, result_2, post_data["operation"])
+# Отправка DELETE запроса
+res_delete = requests.delete(f"{BASE_URL}/number/")
 
-# затем операция из DELETE
-final_result = apply_operation(intermediate, result_3, delete_data["operation"])
+# Получение ответа
+data_delete = res_delete.json()
 
-# приводим к int
-final_result_int = int(final_result)
+print("DELETE response:", data_delete)
 
-print("\nFinal result:", final_result_int)
+# Извлекаем результат и операцию
+c = float(data_delete["result"])
+op3 = data_delete["operation"]
+
+
+# =========================
+# 4) ФОРМИРОВАНИЕ И ВЫЧИСЛЕНИЕ ВЫРАЖЕНИЯ
+# =========================
+
+# Последовательное выполнение операций:
+# сначала GET результат → POST → DELETE
+
+result = apply_operation(a, op1, b)
+result = apply_operation(result, op2, c)
+
+# Приведение результата к целому числу
+final_result = int(result)
+
+print("\nFINAL RESULT:", final_result)
