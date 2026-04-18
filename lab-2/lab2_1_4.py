@@ -19,8 +19,8 @@ while True:
         break
 
 if count > 0:
-    print(f"\nСумма всех чисел: {total_sum}")
-    print(f"Количество чисел: {count}")
-    print(f"Среднее арифметическое: {total_sum / count:.2f}")
+    print("\nСумма всех чисел:", total_sum)
+    print("Количество чисел:", count)
+    print("Среднее арифметическое:", round(total_sum / count, 2))
 else:
     print("Вы не ввели ни одного числа.")
