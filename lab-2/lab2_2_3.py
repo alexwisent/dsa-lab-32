@@ -19,6 +19,6 @@ for char in s:
         new_string += char
 
 # Вывод результатов
-print("Исходная строка:", repr(s))
-print("Строка после удаления точек:", repr(new_string))
+print("Исходная строка:", s)
+print("Строка после удаления точек:", new_string)
 print("Количество удалённых точек:", removed_count)
