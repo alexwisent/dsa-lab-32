@@ -8,17 +8,17 @@ print("Задание 2.3: удаление точек из строки")
 # Считываем строку
 s = input("Введите строку: ")
 
-# Считаем точки и собираем новую строку без точек
+# делаем пустую строку и счетчик
 new_string = ""
 removed_count = 0
 
-for char in s:
-    if char == ".":
+for i in s:
+    if i == ".":
         removed_count += 1
     else:
-        new_string += char
+        new_string += i
 
 # Вывод результатов
-print("Исходная строка:", s)
+# print("Исходная строка:", s)
 print("Строка после удаления точек:", new_string)
 print("Количество удалённых точек:", removed_count)
