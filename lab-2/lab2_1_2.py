@@ -7,8 +7,7 @@ z = float(input("Введите третье число: "))
 
 numbers = [x, y, z]
 
-print("Числа из диапазона [1, 50]:", end=" ")
+print("Числа из диапазона [1, 50]:")
 for num in numbers:
     if 1 <= num <= 50:
-        print(num, end=" ")
-print("\n")
+        print(num)
