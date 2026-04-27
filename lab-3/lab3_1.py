@@ -17,10 +17,10 @@ def get_number():
     try:
         param = request.args.get('param')   # получаем параметр из URL (?param=...)
         if param is None:   # если параметр не передан
-            return jsonify({'error': 'Missing query parameter: param'}), 400    # ошибка
+            return jsonify({'error': 'Отсутствует параметр запроса: param'}), 400    # ошибка
 
         param = float(param)    # преобразуем строку в число
-        random_number = random.uniform(1, 100)  # генерируем случайное число от 1 до 100
+        random_number = random.uniform(1, 100)  # uniform - генерируем случайное число из диапазона в формате float
         result = random_number * param  # умножаем случайное число на param
 
         return jsonify({    # возвращаем ответ в формате JSON
@@ -28,54 +28,43 @@ def get_number():
             'operation': 'mul'  # умножение
         })
     except ValueError:  # если param нельзя преобразовать в число
-        return jsonify({'error': 'param must be a number'}), 400    # ошибка
+        return jsonify({'error': 'параметр должен быть числом'}), 400    # ошибка
 
 
 # 2) Реализовать POST эндпоинт /number/, который принимает в теле 
-# запроса JSON с полем jsonParam.Вернуть сгенерировать рандомно 
+# запроса JSON с полем jsonParam. Вернуть сгенерировать рандомно 
 # число, умноженное на то, что пришло в JSON и рандомно выбрать операцию. 
-@app.route('/number/', methods=['POST'])    # объявляем POST эндпоинт /number/
+@app.route('/number/', methods=['POST'])
 def post_number():
     """
     POST эндпоинт:
     Принимает JSON с полем 'jsonParam'.
     Возвращает случайное число, умноженное на jsonParam,
-    и случайную операцию.
+    и случайную операцию (операция не влияет на результат).
     """
     data = request.get_json()   # получаем JSON из тела запроса
+
     if data is None or 'jsonParam' not in data: # проверяем наличие нужного поля
-        return jsonify({'error': 'Missing or invalid JSON. Required field: jsonParam'}), 400
+        return jsonify({'error': 'Отсутствует или некорректный JSON. Требуется поле jsonParam'}), 400
 
     try:
-        value = float(data['jsonParam'])    # преобразуем значение в число
-        random_number = random.uniform(1, 100)  # генерируем случайное число
-        result = random_number * value  # изначально считаем как умножение
+        value = float(data['jsonParam'])  # data['jsonParam'] - обращение к занчению по ключу и преобразуем в float
+        random_number = random.uniform(1, 100)  # uniform - генерируем случайное число из диапазона в формате float
+        result = random_number * value  # умножаем то что пишло на вход и рандомное число
 
-        # Случайный выбор операции
-        operation = random.choice(['sum', 'sub', 'mul', 'div'])
-
-        # Для операций, отличных от умножения, пересчитываем результат
-        if operation == 'sum':  # сложение
-            result = random_number + value
-        elif operation == 'sub':    # вычитание
-            result = random_number - value
-        elif operation == 'div':    # деление
-            if value == 0:  # проверка деления на 0
-                result = None
-            else:
-                result = random_number / value
-        # если mul(умножение), то оставляем как есть
+        operation = random.choice(['sum', 'sub', 'mul', 'div']) # выбор случайной операции
 
         response = {    # формируем ответ
             'random_number': random_number, # случайное число
             'input_value': value,   # входное значение
-            'result': result if result is not None else 'division by zero', # если деление на 0 — текст
-            'operation': operation  # выбранная операция
+            'result': result,   # результат
+            'operation': operation  # рандомно выбранная операция
         }
+
         return jsonify(response)    # возвращаем JSON
 
-    except ValueError:  # если jsonParam не число
-        return jsonify({'error': 'jsonParam must be a number'}), 400
+    except ValueError:
+        return jsonify({'error': 'jsonParam должен быть числом'}), 400
 
 
 # 3) Реализовать DELETE эндпоинт /number/, 
