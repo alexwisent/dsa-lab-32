@@ -15,6 +15,8 @@ def get_number():
     Возвращает случайное число, умноженное на param.
     """
     try:
+        # request.args - как словарь, в нем лежат параметры из URL (query-параметры)
+        # .get('param') - берет значение по ключу param
         param = request.args.get('param')   # получаем параметр из URL (?param=...)
         if param is None:   # если параметр не передан
             return jsonify({'error': 'Отсутствует параметр запроса: param'}), 400    # ошибка
@@ -87,5 +89,5 @@ def delete_number():
     return jsonify(response)    # возвращаем ответ
 
 
-if __name__ == '__main__':  # точка входа в программу
+if __name__ == '__main__':  # точка входа в программу, запускается только при прямом запуске файла
     app.run(debug=True)  # запускаем сервер в режиме отладки
