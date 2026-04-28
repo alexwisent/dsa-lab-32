@@ -69,34 +69,21 @@ def post_number():
 
 # 3) Реализовать DELETE эндпоинт /number/, 
 # в ответе сгенерировать число и рандомную операцию.
-@app.route('/number/', methods=['DELETE'])  # объявляем DELETE эндпоинт
+@app.route('/number/', methods=['DELETE'])
 def delete_number():
     """
     DELETE эндпоинт:
-    Генерирует случайное число и случайную операцию.
+    Генерирует одно случайное число и случайную операцию.
     """
-    random_number = random.uniform(1, 100)  # первое случайное число
-    second_number = random.uniform(1, 50)   # второе случайное число
+
+    random_number = random.uniform(1, 100)  # uniform - генерируем случайное число из диапазона в формате float
     operation = random.choice(['sum', 'sub', 'mul', 'div']) # случайная операция
 
-    if operation == 'sum':  # сложение
-        result = random_number + second_number
-    elif operation == 'sub':    # вычитание
-        result = random_number - second_number
-    elif operation == 'mul':    # умножение
-        result = random_number * second_number
-    elif operation == 'div':    # деление
-        if second_number == 0:  # защита от деления на 0
-            result = None
-        else:
-            result = random_number / second_number
-
     response = {    # формируем JSON-ответ
-        'first_number': random_number,  # первое число
-        'second_number': second_number,  # второе число
-        'result': result if result is not None else 'division by zero',
-        'operation': operation  # операция
+        'number': random_number,
+        'operation': operation
     }
+
     return jsonify(response)    # возвращаем ответ
 
 

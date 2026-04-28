@@ -25,6 +25,7 @@ print(f"   URL: {BASE_URL}?param={param}")
 print(f"   Ответ: {data}")
 print(f"   Результат: {data['result']} (операция: {data['operation']})")
 
+
 # 2. POST эндпоинт
 print("\n2. POST запрос:")
 json_value = 5
@@ -34,13 +35,10 @@ print(f"   Тело запроса: {{'jsonParam': {json_value}}}")
 print(f"   Ответ: {data}")
 print(f"   Результат: {data['result']} (операция: {data['operation']})")
 
+
 # 3. DELETE эндпоинт
 print("\n3. DELETE запрос:")
 response = requests.delete(BASE_URL)
 data = response.json()
 print(f"   Ответ: {data}")
-print(f"   Результат: {data['result']} (операция: {data['operation']})")
-
-print("\n" + "=" * 50)
-print("ТЕСТИРОВАНИЕ ЗАВЕРШЕНО")
-print("=" * 50)
+print(f"   Число: {data['number']} (операция: {data['operation']})")
