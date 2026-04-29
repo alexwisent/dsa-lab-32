@@ -11,7 +11,7 @@ BASE_URL = "http://127.0.0.1:5000"
 
 def get_random():
     """Генерация случайного целого числа от 1 до 10."""
-    return random.randint(1, 10)
+    return random.randint(1, 10)    # randint - генерит случайное целое число из диапазона 
 
 
 def apply_operation(a, op, b):
@@ -33,7 +33,7 @@ def apply_operation(a, op, b):
         return a / b if b != 0 else 0
 
     # Если пришла неизвестная операция — ошибка
-    raise ValueError(f"Unknown operation: {op}")
+    raise ValueError(f"Неизвестная операция: {op}")
 
 
 # =========================
@@ -52,7 +52,7 @@ res_get = requests.get(
 # Получение JSON-ответа
 data_get = res_get.json()
 
-print("GET response:", data_get)
+print("GET ответ:", data_get)
 
 # Извлекаем результат и операцию из ответа
 a = float(data_get["result"])
@@ -75,7 +75,7 @@ post_response = requests.post(
 # Получение ответа
 data_post = post_response.json()
 
-print("POST response:", data_post)
+print("POST ответ:", data_post)
 
 # Извлечение данных
 b = float(data_post["result"])
@@ -92,10 +92,10 @@ res_delete = requests.delete(f"{BASE_URL}/number/")
 # Получение ответа
 data_delete = res_delete.json()
 
-print("DELETE response:", data_delete)
+print("DELETE ответ:", data_delete)
 
 # Извлекаем результат и операцию
-c = float(data_delete["result"])
+c = float(data_delete["number"])
 op3 = data_delete["operation"]
 
 
@@ -112,4 +112,4 @@ result = apply_operation(result, op2, c)
 # Приведение результата к целому числу
 final_result = int(result)
 
-print("\nFINAL RESULT:", final_result)
+print("\nОкончательные результат:", final_result)
