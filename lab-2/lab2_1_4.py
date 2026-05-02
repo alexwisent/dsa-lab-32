@@ -21,6 +21,5 @@ while True: # Бесконечный цикл, который прерывает
 if count > 0:
     print("\nСумма всех чисел:", total_sum)
     print("Количество чисел:", count)
-    print("Среднее арифметическое:", round(total_sum / count, 2))
 else:
     print("Вы не ввели ни одного числа.")
