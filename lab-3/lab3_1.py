@@ -18,19 +18,19 @@ def get_number():
         # request.args - как словарь, в нем лежат параметры из URL (query-параметры)
         # .get('param') - берет значение по ключу param
         param = request.args.get('param')   # получаем параметр из URL (?param=...)
-        if param is None:   # если параметр не передан
-            return jsonify({'error': 'Отсутствует параметр запроса: param'}), 400    # ошибка
+        if param is None:
+            return jsonify({'error': 'Отсутствует параметр запроса: param'}), 400
 
         param = float(param)    # преобразуем строку в число
         random_number = random.uniform(1, 100)  # uniform - генерируем случайное число из диапазона в формате float
-        result = random_number * param  # умножаем случайное число на param
+        result = random_number * param
 
-        return jsonify({    # возвращаем ответ в формате JSON
-            'result': result,   # результат вычисления
-            'operation': 'mul'  # умножение
+        return jsonify({    # возвращаем JSON ответ
+            'result': result,
+            'operation': 'mul'
         })
     except ValueError:  # если param нельзя преобразовать в число
-        return jsonify({'error': 'параметр должен быть числом'}), 400    # ошибка
+        return jsonify({'error': 'параметр должен быть числом'}), 400
 
 
 # 2) Реализовать POST эндпоинт /number/, который принимает в теле 
@@ -52,15 +52,15 @@ def post_number():
     try:
         value = float(data['jsonParam'])  # data['jsonParam'] - обращение к занчению по ключу и преобразуем в float
         random_number = random.uniform(1, 100)  # uniform - генерируем случайное число из диапазона в формате float
-        result = random_number * value  # умножаем то что пишло на вход и рандомное число
+        result = random_number * value
 
-        operation = random.choice(['sum', 'sub', 'mul', 'div']) # выбор случайной операции
+        operation = random.choice(['sum', 'sub', 'mul', 'div'])
 
-        response = {    # формируем ответ
-            'random_number': random_number, # случайное число
-            'input_value': value,   # входное значение
-            'result': result,   # результат
-            'operation': operation  # рандомно выбранная операция
+        response = {
+            'random_number': random_number,
+            'input_value': value,
+            'result': result,
+            'operation': operation
         }
 
         return jsonify(response)    # возвращаем JSON
@@ -79,14 +79,14 @@ def delete_number():
     """
 
     random_number = random.uniform(1, 100)  # uniform - генерируем случайное число из диапазона в формате float
-    operation = random.choice(['sum', 'sub', 'mul', 'div']) # случайная операция
+    operation = random.choice(['sum', 'sub', 'mul', 'div'])
 
-    response = {    # формируем JSON-ответ
+    response = {
         'number': random_number,
         'operation': operation
     }
 
-    return jsonify(response)    # возвращаем ответ
+    return jsonify(response)
 
 
 if __name__ == '__main__':  # точка входа в программу, запускается только при прямом запуске файла
