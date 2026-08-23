@@ -47,3 +47,9 @@ def index():
     else:
         return redirect(url_for('login'))
 
+
+# 4. Создать endpoint для перехода на страницу входа GET /login
+@app.route('/login')
+def login():
+    return render_template('login.html')
+
