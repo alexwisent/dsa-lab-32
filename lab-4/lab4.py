@@ -49,7 +49,38 @@ def index():
 
 
 # 4. Создать endpoint для перехода на страницу входа GET /login
-@app.route('/login')
+# @app.route('/login')
+# def login():
+#     return render_template('login.html')
+
+
+# 5. Создать endpoint для осуществления авторизации POST /login. + GET
+@app.route('/login', methods=['GET', 'POST'])
 def login():
+    if request.method == 'POST':
+        # 5.1 Получаем данные из формы
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        # 5.2 Ищем пользователя по email
+        user = User.query.filter_by(email=email).first()
+
+        if not user:
+            flash('Пользователь с таким email не найден', 'error')
+            return render_template('login.html')
+
+        # 5.3 Проверяем пароль (сравниваем с хешем в базе)
+        if not check_password_hash(user.password, password):
+            flash('Неверный пароль', 'error')
+            return render_template('login.html')
+
+        # 5.4 Всё верно — авторизуем и перенаправляем на главную
+        login_user(user)
+        return redirect(url_for('index'))
+
+    # Если запрос GET — просто показываем форму
     return render_template('login.html')
 
+
+if __name__ == '__main__':
+    app.run(debug=True)
