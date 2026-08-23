@@ -9,11 +9,6 @@ app = Flask(__name__)   # создаём экземпляр приложения
 # умноженное на значение из параметра в формате JSON.
 @app.route('/number/', methods=['GET']) # объявляем GET эндпоинт /number/
 def get_number():
-    """
-    GET эндпоинт:
-    Принимает query-параметр 'param' (число).
-    Возвращает случайное число, умноженное на param.
-    """
     try:
         # request.args - как словарь, в нем лежат параметры из URL (query-параметры)
         # .get('param') - берет значение по ключу param
@@ -38,12 +33,6 @@ def get_number():
 # число, умноженное на то, что пришло в JSON и рандомно выбрать операцию. 
 @app.route('/number/', methods=['POST'])
 def post_number():
-    """
-    POST эндпоинт:
-    Принимает JSON с полем 'jsonParam'.
-    Возвращает случайное число, умноженное на jsonParam,
-    и случайную операцию (операция не влияет на результат).
-    """
     data = request.get_json()   # получаем JSON из тела запроса
 
     if data is None or 'jsonParam' not in data: # проверяем наличие нужного поля
@@ -73,11 +62,6 @@ def post_number():
 # в ответе сгенерировать число и рандомную операцию.
 @app.route('/number/', methods=['DELETE'])
 def delete_number():
-    """
-    DELETE эндпоинт:
-    Генерирует одно случайное число и случайную операцию.
-    """
-
     random_number = random.uniform(1, 100)  # uniform - генерируем случайное число из диапазона в формате float
     operation = random.choice(['sum', 'sub', 'mul', 'div'])
 
