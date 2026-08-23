@@ -39,6 +39,7 @@ with app.app_context():
 
 
 # 3. Создать endpoint для перехода на корневую страницу GET /. 
+# Авторизованного пользователя закидывает на главную страницу, а неавторизованного на вход
 @app.route('/')
 def index():
     if current_user.is_authenticated:
