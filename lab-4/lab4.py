@@ -9,9 +9,9 @@ app.config['SECRET_KEY'] = 'super-secret-key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-db = SQLAlchemy(app)
+db = SQLAlchemy(app)    # создаём объект для работы с БД
 
-login_manager = LoginManager()
+login_manager = LoginManager()  # менеджер авторизации
 login_manager.login_view = 'login'
 login_manager.init_app(app)
 
@@ -19,7 +19,7 @@ login_manager.init_app(app)
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(100), unique=True, nullable=False)
-    password = db.Column(db.String(200), nullable=False)   # 200 лучше, чем 100 (хеш длинный)
+    password = db.Column(db.String(200), nullable=False)
     name = db.Column(db.String(1000), nullable=False)
 
     def __repr__(self):
@@ -32,7 +32,7 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 
-# Создание таблицы (один раз)
+# Создание таблицы
 with app.app_context():
     db.create_all()
 
