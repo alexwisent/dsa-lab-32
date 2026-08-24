@@ -82,10 +82,54 @@ def login():
     return render_template('login.html')
 
 
-# 6. Создать endpoint для перехода на страницу регистрации GET /signup. 
-@app.route('/signup')
+# # 6. Создать endpoint для перехода на страницу регистрации GET /signup. 
+# @app.route('/signup')
+# def signup():
+#     return render_template('signup.html')
+
+
+# 7. Создать endpoint для осуществления авторизации POST /signup. + GET
+@app.route('/signup', methods=['GET', 'POST'])
 def signup():
+    if request.method == 'POST':
+        # 7.1 Получаем данные из формы
+        name = request.form.get('name')
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        # 7.2 Ищем пользователя по email
+        user = User.query.filter_by(email=email).first()
+
+        # 7.3 Если пользователь уже существует
+        if user:
+            flash('Пользователь с таким email уже существует', 'error')
+            return render_template('signup.html')
+
+        # 7.4 Регистрируем нового пользователя
+        new_user = User(
+            name=name,
+            email=email,
+            password=generate_password_hash(password)
+        )
+        db.session.add(new_user)
+        db.session.commit()
+
+        flash('Регистрация прошла успешно! Теперь войдите в систему.', 'success')
+        return redirect(url_for('login'))
+
+    # Если запрос GET — показываем форму
     return render_template('signup.html')
+
+
+# 8. Создать endpoint для осуществления выхода GET /logout
+@app.route('/logout')
+@login_required
+def logout():
+    # 8.1 Завершаем сессию текущего авторизованного пользователя
+    logout_user()
+
+    # 8.2 Перенаправляем пользователя на страницу входа
+    return redirect(url_for('login'))
 
 
 if __name__ == '__main__':
