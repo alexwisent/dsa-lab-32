@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Регистрация — Лабораторная работа №4{% endblock %}
+
+{% block content %}
+    <h1>Регистрация</h1>
+
+    <form method="POST" action="{{ url_for('signup') }}">
+        <label for="name">Имя:</label>
+        <input type="text" id="name" name="name" required>
+
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required>
+
+        <label for="password">Пароль:</label>
+        <input type="password" id="password" name="password" required>
+
+        <button type="submit">Зарегистрироваться</button>
+    </form>
+
+    <p>Уже есть аккаунт? <a href="{{ url_for('login') }}">Войти</a></p>
+{% endblock %}
