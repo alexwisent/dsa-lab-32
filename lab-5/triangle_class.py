@@ -2,7 +2,7 @@ from triangle_func import get_triangle_type, IncorrectTriangleSides
 
 class Triangle:
     def __init__(self, a, b, c):
-        get_triangle_type(a, b, c)   # если ошибка сразу выбросит IncorrectTriangleSides 
+        get_triangle_type(a, b, c)  # проверка + выброс исключения
 
         self.a = a
         self.b = b
