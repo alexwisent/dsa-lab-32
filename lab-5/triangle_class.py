@@ -14,8 +14,9 @@ class Triangle:
     def perimeter(self):    # вычсиляет и возращает перимерт 
         return self.a + self.b + self.c
 
-if __name__ == "__main__":
-    triangle = Triangle(3, 4, 5)
+# Пример работы кода
+# if __name__ == "__main__":
+#     triangle = Triangle(3, 4, 5)
 
-    print("Тип треугольника:", triangle.triangle_type())
-    print("Периметр:", triangle.perimeter())
+#     print("Тип треугольника:", triangle.triangle_type())
+#     print("Периметр:", triangle.perimeter())
