@@ -17,7 +17,6 @@ def nonequilateral():
 
 # ========== ПОЗИТИВНЫЕ ТЕСТЫ ==========
 
-# проверяется, что стороны правильно сохранились в атрибутах объекта
 def test_triangle_creation_positive():  
     t = Triangle(3, 4, 5)
     assert t.a == 3
