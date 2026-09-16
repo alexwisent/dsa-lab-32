@@ -12,7 +12,7 @@ limiter = Limiter(
     get_remote_address,
     app=app,
     default_limits=["100 per day"],     # общее ограничение: 100 запросов в сутки
-    storage_uri="memory://"
+    storage_uri="memory://"     # счётчики хранятся в оперативной памяти приложения
 )
 
 
