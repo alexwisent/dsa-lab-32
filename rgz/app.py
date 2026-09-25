@@ -104,13 +104,13 @@ def index():
     return redirect(url_for("login"))
 
 
-# ---------------- 1.2 РЕГИСТРАЦИЯ ----------------
-# По заданию: POST /reg принимает JSON с логином и паролем.
-# Но чтобы вы могли пользоваться сайтом, добавлена и HTML-форма.
+# 1.2. Регистрация
+# 1.2.1. Клиент отправляется запрос /reg с телом в JSON формате. 
+# Чтобы можно было пользоваться сайтом добавляем HTML-формы
 @app.route("/reg", methods=["GET", "POST"])
 def reg():
     if request.method == "POST":
-        # Если пришёл JSON — работаем как требует задание
+        # Если пришёл JSON 
         if request.is_json:
             data = request.get_json()
             login = data.get("login")
@@ -129,7 +129,7 @@ def reg():
         try:
             with db() as conn:
                 cur = conn.cursor()
-                # Проверяем, что логин свободен
+                # 1.2.2. Проверяем, что пользователь не зарегистрирован
                 cur.execute("SELECT id FROM users WHERE login = %s", (login,))
                 if cur.fetchone() is not None:
                     if request.is_json:
@@ -137,7 +137,7 @@ def reg():
                     flash("Пользователь с таким логином уже существует", "error")
                     return render_template("reg.html")
 
-                # Сохраняем логин и хеш пароля
+                # 1.2.3. Сохраняем логин и пароль (в виде хэша) 
                 password_hash = generate_password_hash(password)
                 cur.execute(
                     "INSERT INTO users (login, password_hash) VALUES (%s, %s)",
@@ -145,13 +145,14 @@ def reg():
                 )
                 conn.commit()
 
-            # Ответ по заданию: 200 OK
+            # 1.2.4. Формируем ответ 200 OK
             if request.is_json:
                 return jsonify({"status": "OK"}), 200
 
             flash("Регистрация прошла успешно. Теперь войдите.", "success")
             return redirect(url_for("login"))
 
+        # 1.2.5. показывам ошибку 500
         except Exception as e:
             print("Ошибка регистрации:", e)
             if request.is_json:
@@ -163,7 +164,7 @@ def reg():
     return render_template("reg.html")
 
 
-# ---------------- АВТОРИЗАЦИЯ ----------------
+# Авторизация
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -194,9 +195,11 @@ def login():
         login_user(user)
         return redirect(url_for("index"))
 
+    # GET — показываем форму авторизации
     return render_template("login.html")
 
 
+# Выход
 @app.route("/logout")
 @login_required
 def logout():
@@ -204,14 +207,14 @@ def logout():
     return redirect(url_for("login"))
 
 
-# ---------------- 1.3 ДОБАВЛЕНИЕ ОПЕРАЦИИ ----------------
-# По заданию: POST /add_operation принимает JSON.
-# Но также работает и HTML-форма, чтобы вы могли пользоваться сайтом.
+# 1.3. Добавление новой операции 
+# Клиент отправляет HTTP запрос /add_operation с телом в формате JSON
+# Чтобы можно было пользоваться сайтом добавляем HTML-формы
 @app.route("/add_operation", methods=["GET", "POST"])
 @login_required
 def add_operation():
     if request.method == "POST":
-        # Поддержка JSON (по заданию)
+        # Если пришёл JSON 
         if request.is_json:
             data = request.get_json()
             type_operation = data.get("type_operation")
@@ -219,11 +222,11 @@ def add_operation():
             date_value = data.get("date")
             payment_method = data.get("payment_method")
             user_id = data.get("user_id")
-            # По заданию клиент присылает user_id, но мы проверяем,
-            # что он совпадает с текущим авторизованным пользователем
+            # Проверяем, что user_id, переданный в запросе, совпадает с ID текущего авторизованного пользователя
             if user_id is not None and int(user_id) != int(current_user.id):
                 return jsonify({"error": "user mismatch"}), 403
         else:
+            # Если пришла обычная форма с сайта
             type_operation = request.form.get("type_operation")
             sum_value = request.form.get("sum")
             date_value = request.form.get("date")
@@ -236,7 +239,7 @@ def add_operation():
             flash("Заполните все обязательные поля", "error")
             return render_template("add_operation.html")
 
-        # Логика варианта 5:
+        # 2.1.8. Необходимо доработать endpoint GET /operations таким образом, чтобы пользователю отображался метод оплаты для расходных операций.
         # ДОХОД -> payment_method = NULL
         # РАСХОД -> payment_method обязательно НАЛИЧНЫЕ или КАРТА
         if type_operation == "ДОХОД":
@@ -254,6 +257,7 @@ def add_operation():
             return render_template("add_operation.html")
 
         try:
+            # 1.3.3. Backend сохраняет полученную информацию в БД.
             with db() as conn:
                 cur = conn.cursor()
                 cur.execute("""
@@ -269,12 +273,15 @@ def add_operation():
                 ))
                 conn.commit()
 
+            # 1.3.4. Backend формирует ответ 200 OK
             if request.is_json:
                 return jsonify({"status": "OK"}), 200
 
+            # Для обычной формы с сайта — редирект на список операций с сообщением об успехе
             flash("Операция добавлена", "success")
             return redirect(url_for("operations"))
 
+        # Если что-то пошло не так в try:
         except Exception as e:
             print("Ошибка добавления операции:", e)
             if request.is_json:
@@ -286,13 +293,15 @@ def add_operation():
     return render_template("add_operation.html")
 
 
-# ---------------- 1.4 ПРОСМОТР ОПЕРАЦИЙ ----------------
+# 1.4. Просмотр операций пользователя
 @app.route("/operations", methods=["GET"])
 @login_required
 def operations():
+    # 1.4.1. Клиент отправляет HTTР запрос /operations с аргументом адресной строки currency (RUB, EUR, USD) - валюта, в которой пользователь ожидает увидеть информацию.
     currency = request.args.get("currency", "RUB")
-    rate = 1.0
+    rate = 1.0  # перменная для курса по умолчанию - для RUB все остается как есть 
 
+    # 1.4.3. Если пользователь выбрал EUR или USD, то backend отправляет запрос на получение актуального курса во внешний сервис.
     if currency in ("USD", "EUR"):
         try:
             resp = requests.get(
@@ -307,6 +316,7 @@ def operations():
             print("Ошибка внешнего сервиса:", e)
             rate = 1.0
 
+    # 1.4.4. Backend получает все операции пользователя из operations.
     with db() as conn:
         cur = conn.cursor()
         cur.execute("""
@@ -317,13 +327,14 @@ def operations():
         """, (current_user.id,))
         rows = cur.fetchall()
 
+    # 1.4.5. Backend выполняет конвертацию операций в выбранную пользователем.
     result = []
     for r in rows:
         orig_sum = float(r[1])
         converted = round(orig_sum / rate, 2)
 
-        type_op = (r[2] or "").lower()          # "доход" / "расход"
-        payment = (r[3] or "").lower() if r[3] else "—"
+        type_op = (r[2] or "").lower()  # "доход" / "расход"
+        payment = (r[3] or "").lower()  # "" для дохода
 
         # Для расхода показываем сумму со знаком минус
         if type_op == "расход":
@@ -338,6 +349,7 @@ def operations():
             "payment_method": payment
         })
 
+    # 1.4.6. Backend возвращает в теле ответа информацию пользователю по всем операциям.
     return render_template(
         "operations.html",
         operations=result,
