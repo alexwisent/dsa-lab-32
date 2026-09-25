@@ -40,7 +40,7 @@ with db() as conn:
         )
     """)
 
-    # Таблица операций (с учётом варианта 5)
+    # Таблица операций (с учётом варианта 5: в operations + колонка payment_method)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS operations (
             id SERIAL PRIMARY KEY,
