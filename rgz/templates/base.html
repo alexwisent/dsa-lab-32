@@ -2,32 +2,153 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}Финансы{% endblock %}</title>
+    <title>{% block title %}Учёт финансов{% endblock %}</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; }
-        .error { color: red; }
-        .success { color: green; }
-        input, select, button { margin: 5px 0; padding: 8px; width: 100%; box-sizing: border-box; }
-        a { margin-right: 15px; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5;
+        }
+        header {
+            background: #2c3e50;
+            color: #fff;
+            padding: 15px 30px;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 20px;
+        }
+        nav {
+            background: #34495e;
+            padding: 10px 30px;
+        }
+        nav a {
+            color: #ecf0f1;
+            margin-right: 15px;
+            text-decoration: none;
+        }
+        nav a:hover {
+            text-decoration: underline;
+        }
+        main {
+            max-width: 800px;
+            margin: 30px auto;
+            background: #fff;
+            padding: 25px;
+            border-radius: 6px;
+            box-shadow: 0 0 8px rgba(0,0,0,0.1);
+        }
+        h2 { margin-top: 0; }
+
+        .flash-error {
+            color: #c0392b;
+            background: #fdecea;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .flash-success {
+            color: #27ae60;
+            background: #eafaf1;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .form-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 12px;
+        }
+        .form-row label {
+            width: 140px;
+            flex-shrink: 0;
+            font-weight: bold;
+        }
+        .form-row input[type="number"],
+        .form-row input[type="date"],
+        .form-row select {
+            padding: 6px;
+            flex: 1;
+            max-width: 260px;
+            box-sizing: border-box;
+        }
+
+        /* Плашки выбора типа операции */
+        .type-toggle {
+            display: flex;
+            gap: 10px;
+        }
+        .type-toggle input[type="radio"] {
+            display: none;
+        }
+        .type-toggle label {
+            display: inline-block;
+            padding: 8px 22px;
+            border: 2px solid #bbb;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #fafafa;
+            font-weight: normal;
+            width: auto;
+            transition: 0.15s;
+        }
+        .type-toggle label:hover {
+            border-color: #888;
+        }
+        .type-toggle input[type="radio"]:checked + label {
+            background: #27ae60;
+            border-color: #1e8449;
+            color: #fff;
+        }
+
+        form button {
+            padding: 8px 16px;
+            background: #2980b9;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        form button:hover { background: #1f618d; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table th, table td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
     </style>
 </head>
 <body>
+
+    <header>
+        <h1>Приложение учёта финансов</h1>
+    </header>
+
     {% if current_user.is_authenticated %}
-        <p>
-            Вы вошли как <b>{{ current_user.login }}</b> |
-            <a href="{{ url_for('add_operation') }}">Добавить операцию</a> |
-            <a href="{{ url_for('logout') }}">Выйти</a>
-        </p>
+    <nav>
+        <a href="{{ url_for('index') }}">Главная</a>
+        <a href="{{ url_for('add_operation') }}">Добавить операцию</a>
+        <a href="{{ url_for('operations') }}">Операции</a>
+        <a href="{{ url_for('logout') }}">Выйти ({{ current_user.login }})</a>
+    </nav>
     {% endif %}
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
             {% for category, message in messages %}
-                <p class="{{ category }}">{{ message }}</p>
+                <div class="flash-{{ category }}">{{ message }}</div>
             {% endfor %}
-        {% endif %}
-    {% endwith %}
+        {% endwith %}
 
-    {% block content %}{% endblock %}
+        {% block content %}{% endblock %}
+    </main>
+
 </body>
 </html>

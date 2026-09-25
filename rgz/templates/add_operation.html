@@ -1,21 +1,65 @@
 {% extends "base.html" %}
+
 {% block title %}Добавить операцию{% endblock %}
 
 {% block content %}
-<h2>Добавить операцию</h2>
-<form method="post">
-    <label>Тип операции:</label>
-    <select name="type_operation" required>
-        <option value="ДОХОД">ДОХОД</option>
-        <option value="РАСХОД">РАСХОД</option>
-    </select>
+    <h2>Добавить операцию</h2>
 
-    <label>Сумма:</label>
-    <input type="number" name="sum" step="0.01" min="0.01" required>
+    <form method="POST">
+        <div class="form-row">
+            <label>Тип операции:</label>
+            <div class="type-toggle">
+                <input type="radio" id="type_income" name="type_operation" value="ДОХОД"
+                       {% if not request.form.get('type_operation') or request.form.get('type_operation') == 'ДОХОД' %}checked{% endif %}
+                       onchange="togglePayment()">
+                <label for="type_income">Доход</label>
 
-    <label>Дата:</label>
-    <input type="date" name="date" required>
+                <input type="radio" id="type_expense" name="type_operation" value="РАСХОД"
+                       {% if request.form.get('type_operation') == 'РАСХОД' %}checked{% endif %}
+                       onchange="togglePayment()">
+                <label for="type_expense">Расход</label>
+            </div>
+        </div>
 
-    <button type="submit">Добавить</button>
-</form>
+        <div class="form-row">
+            <label>Сумма (руб):</label>
+            <input type="number" step="0.01" name="sum" required>
+        </div>
+
+        <div class="form-row">
+            <label>Дата:</label>
+            <input type="date" name="date" required>
+        </div>
+
+        <div class="form-row" id="payment_block">
+            <label>Способ оплаты:</label>
+            <div class="type-toggle">
+                <input type="radio" id="pay_cash" name="payment_method" value="НАЛИЧНЫЕ">
+                <label for="pay_cash">Наличные</label>
+
+                <input type="radio" id="pay_card" name="payment_method" value="КАРТА">
+                <label for="pay_card">Карта</label>
+            </div>
+        </div>
+
+        <button type="submit">Добавить</button>
+    </form>
+
+    <script>
+        function togglePayment() {
+            const isExpense = document.getElementById("type_expense").checked;
+            const block = document.getElementById("payment_block");
+
+            if (isExpense) {
+                block.style.display = "flex";
+            } else {
+                block.style.display = "none";
+                // Снимаем выбор способа оплаты, чтобы при доходе
+                // на сервер ушёл NULL
+                document.getElementById("pay_cash").checked = false;
+                document.getElementById("pay_card").checked = false;
+            }
+        }
+        togglePayment();
+    </script>
 {% endblock %}

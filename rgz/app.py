@@ -1,8 +1,9 @@
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-from flask import Flask, request, render_template, redirect, url_for, flash, session
+from flask import Flask, request, render_template, redirect, url_for, flash, jsonify
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+import requests
 
 app = Flask(__name__)
 app.secret_key = "super-secret-key"
@@ -31,7 +32,7 @@ def load_user(user_id):
     return None
 
 
-# 1.1 Подключение к БД 
+# 1.1 Подключение к БД
 def db(database="finance_db"):
     return psycopg2.connect(
         dbname=database,
@@ -69,7 +70,7 @@ with db() as conn:
         )
     """)
 
-    # Таблица operations 
+    # Таблица operations (с payment_method — Вариант 5)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS operations (
             id SERIAL PRIMARY KEY,
@@ -103,73 +104,73 @@ def index():
     return redirect(url_for("login"))
 
 
-# 1.2. Регистрация
-# 1.2.1. Клиент отправляется запрос /reg с телом в JSON формате. Тело запроса должно содержать логин и пароль.
+# ---------------- 1.2 РЕГИСТРАЦИЯ ----------------
+# По заданию: POST /reg принимает JSON с логином и паролем.
+# Но чтобы вы могли пользоваться сайтом, добавлена и HTML-форма.
 @app.route("/reg", methods=["GET", "POST"])
-def register():
+def reg():
     if request.method == "POST":
-        # Поддерживаем JSON (по заданию) и форму (для Jinja)
+        # Если пришёл JSON — работаем как требует задание
         if request.is_json:
             data = request.get_json()
-            login = data.get("login", "").strip() if data else ""
-            password = data.get("password", "") if data else ""
+            login = data.get("login")
+            password = data.get("password")
         else:
-            login = request.form.get("login", "").strip()
-            password = request.form.get("password", "")
+            # Если пришла обычная форма с сайта
+            login = request.form.get("login")
+            password = request.form.get("password")
 
         if not login or not password:
             if request.is_json:
-                return jsonify({"error": "Нужны login и password"}), 400
+                return jsonify({"error": "login and password required"}), 400
             flash("Заполните все поля", "error")
-            return render_template("register.html")
-
-        # Хешируем пароль
-        password_hash = generate_password_hash(password)
+            return render_template("reg.html")
 
         try:
             with db() as conn:
                 cur = conn.cursor()
-
-                # 1.2.2. Backend проверяет, что пользователь не зарегистрирован
-                cur.execute("SELECT 1 FROM users WHERE login = %s", (login,))
-                if cur.fetchone():
+                # Проверяем, что логин свободен
+                cur.execute("SELECT id FROM users WHERE login = %s", (login,))
+                if cur.fetchone() is not None:
                     if request.is_json:
-                        return jsonify({"error": "Пользователь уже зарегистрирован"}), 409
-                    flash("Пользователь уже зарегистрирован", "error")
-                    return render_template("register.html")
+                        return jsonify({"error": "user already exists"}), 400
+                    flash("Пользователь с таким логином уже существует", "error")
+                    return render_template("reg.html")
 
-                # 1.2.3. Backend сохраняет логин и пароль (в виде хэша) в БД
+                # Сохраняем логин и хеш пароля
+                password_hash = generate_password_hash(password)
                 cur.execute(
                     "INSERT INTO users (login, password_hash) VALUES (%s, %s)",
                     (login, password_hash)
                 )
                 conn.commit()
 
-            # 1.2.4. Успешный ответ
+            # Ответ по заданию: 200 OK
             if request.is_json:
-                return jsonify({"message": "Регистрация успешна"}), 200
+                return jsonify({"status": "OK"}), 200
 
-            flash("Регистрация успешна! Теперь войдите.", "success")
+            flash("Регистрация прошла успешно. Теперь войдите.", "success")
             return redirect(url_for("login"))
 
-        except Exception:
-            # 1.2.5. Любая ошибка: 500
+        except Exception as e:
+            print("Ошибка регистрации:", e)
             if request.is_json:
-                return jsonify({"error": "Внутренняя ошибка сервера"}), 500
+                return jsonify({"error": "internal server error"}), 500
             flash("Внутренняя ошибка сервера", "error")
-            return render_template("register.html")
+            return render_template("reg.html")
 
-    return render_template("register.html")
+    # GET — показываем форму регистрации
+    return render_template("reg.html")
 
 
-# Авторизация
+# ---------------- АВТОРИЗАЦИЯ ----------------
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        login = request.form.get("login", "").strip()
-        password = request.form.get("password", "")
+        login_name = request.form.get("login")
+        password = request.form.get("password")
 
-        if not login or not password:
+        if not login_name or not password:
             flash("Заполните все поля", "error")
             return render_template("login.html")
 
@@ -177,21 +178,19 @@ def login():
             cur = conn.cursor()
             cur.execute(
                 "SELECT id, login, password_hash FROM users WHERE login = %s",
-                (login,)
+                (login_name,)
             )
-            user_data = cur.fetchone()
+            row = cur.fetchone()
 
-        if not user_data:
-            flash("Неверный логин или пароль", "error")
+        if not row:
+            flash("Пользователь не найден", "error")
             return render_template("login.html")
 
-        user_id, user_login, password_hash = user_data
-
-        if not check_password_hash(password_hash, password):
-            flash("Неверный логин или пароль", "error")
+        if not check_password_hash(row[2], password):
+            flash("Неверный пароль", "error")
             return render_template("login.html")
 
-        user = User(user_id, user_login)
+        user = User(row[0], row[1])
         login_user(user)
         return redirect(url_for("index"))
 
@@ -205,7 +204,145 @@ def logout():
     return redirect(url_for("login"))
 
 
+# ---------------- 1.3 ДОБАВЛЕНИЕ ОПЕРАЦИИ ----------------
+# По заданию: POST /add_operation принимает JSON.
+# Но также работает и HTML-форма, чтобы вы могли пользоваться сайтом.
+@app.route("/add_operation", methods=["GET", "POST"])
+@login_required
+def add_operation():
+    if request.method == "POST":
+        # Поддержка JSON (по заданию)
+        if request.is_json:
+            data = request.get_json()
+            type_operation = data.get("type_operation")
+            sum_value = data.get("sum")
+            date_value = data.get("date")
+            payment_method = data.get("payment_method")
+            user_id = data.get("user_id")
+            # По заданию клиент присылает user_id, но мы проверяем,
+            # что он совпадает с текущим авторизованным пользователем
+            if user_id is not None and int(user_id) != int(current_user.id):
+                return jsonify({"error": "user mismatch"}), 403
+        else:
+            type_operation = request.form.get("type_operation")
+            sum_value = request.form.get("sum")
+            date_value = request.form.get("date")
+            payment_method = request.form.get("payment_method")
 
+        # Валидация
+        if not type_operation or not sum_value or not date_value:
+            if request.is_json:
+                return jsonify({"error": "missing fields"}), 400
+            flash("Заполните все обязательные поля", "error")
+            return render_template("add_operation.html")
+
+        # Логика варианта 5:
+        # ДОХОД -> payment_method = NULL
+        # РАСХОД -> payment_method обязательно НАЛИЧНЫЕ или КАРТА
+        if type_operation == "ДОХОД":
+            payment_method = None
+        elif type_operation == "РАСХОД":
+            if payment_method not in ("НАЛИЧНЫЕ", "КАРТА"):
+                if request.is_json:
+                    return jsonify({"error": "invalid payment method"}), 400
+                flash("Для расхода выберите способ оплаты", "error")
+                return render_template("add_operation.html")
+        else:
+            if request.is_json:
+                return jsonify({"error": "invalid type_operation"}), 400
+            flash("Неверный тип операции", "error")
+            return render_template("add_operation.html")
+
+        try:
+            with db() as conn:
+                cur = conn.cursor()
+                cur.execute("""
+                    INSERT INTO operations
+                        (date, sum, chat_id, type_operation, payment_method)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (
+                    date_value,
+                    sum_value,
+                    current_user.id,
+                    type_operation,
+                    payment_method
+                ))
+                conn.commit()
+
+            if request.is_json:
+                return jsonify({"status": "OK"}), 200
+
+            flash("Операция добавлена", "success")
+            return redirect(url_for("operations"))
+
+        except Exception as e:
+            print("Ошибка добавления операции:", e)
+            if request.is_json:
+                return jsonify({"error": "internal server error"}), 500
+            flash("Внутренняя ошибка сервера", "error")
+            return render_template("add_operation.html")
+
+    # GET — показываем форму
+    return render_template("add_operation.html")
+
+
+# ---------------- 1.4 ПРОСМОТР ОПЕРАЦИЙ ----------------
+@app.route("/operations", methods=["GET"])
+@login_required
+def operations():
+    currency = request.args.get("currency", "RUB")
+    rate = 1.0
+
+    if currency in ("USD", "EUR"):
+        try:
+            resp = requests.get(
+                f"http://localhost:5001/rate?currency={currency}",
+                timeout=3
+            )
+            if resp.status_code == 200:
+                rate = float(resp.json().get("rate", 1.0))
+            else:
+                rate = 1.0
+        except Exception as e:
+            print("Ошибка внешнего сервиса:", e)
+            rate = 1.0
+
+    with db() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT date, sum, type_operation, payment_method
+            FROM operations
+            WHERE chat_id = %s
+            ORDER BY date DESC
+        """, (current_user.id,))
+        rows = cur.fetchall()
+
+    result = []
+    for r in rows:
+        orig_sum = float(r[1])
+        converted = round(orig_sum / rate, 2)
+
+        type_op = (r[2] or "").lower()          # "доход" / "расход"
+        payment = (r[3] or "").lower() if r[3] else "—"
+
+        # Для расхода показываем сумму со знаком минус
+        if type_op == "расход":
+            display_sum = -converted
+        else:
+            display_sum = converted
+
+        result.append({
+            "date": r[0],
+            "sum": display_sum,
+            "type_operation": type_op,
+            "payment_method": payment
+        })
+
+    return render_template(
+        "operations.html",
+        operations=result,
+        currency=currency
+    )
 
 
 if __name__ == "__main__":

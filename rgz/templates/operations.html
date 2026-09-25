@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Операции{% endblock %}
+
+{% block content %}
+    <h2>Список операций</h2>
+
+    <p>
+        Валюта:
+        <a href="{{ url_for('operations', currency='RUB') }}">RUB</a> |
+        <a href="{{ url_for('operations', currency='USD') }}">USD</a> |
+        <a href="{{ url_for('operations', currency='EUR') }}">EUR</a>
+        (текущая: {{ currency }})
+    </p>
+
+    {% if operations %}
+        <table>
+            <tr>
+                <th>Дата</th>
+                <th>Сумма</th>
+                <th>Тип операции</th>
+                <th>Способ оплаты</th>
+            </tr>
+            {% for op in operations %}
+                <tr>
+                    <td>{{ op.date }}</td>
+                    <td>{{ op.sum }}</td>
+                    <td>{{ op.type_operation }}</td>
+                    <td>{{ op.payment_method }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>Операций пока нет.</p>
+    {% endif %}
+{% endblock %}
