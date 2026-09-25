@@ -1,9 +1,10 @@
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-from flask import Flask, request, jsonify
-from werkzeug.security import generate_password_hash
+from flask import Flask, request, jsonify, session
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
+app.secret_key = "super-secret-key"   # нужен для работы сессий
 
 # 1.1. Создание Базы Данных Posgres
 # Подключение к базе
@@ -114,6 +115,105 @@ def register():
 
     except Exception:
         # 1.2.5. Любая ошибка: 500
+        return jsonify({"error": "Внутренняя ошибка сервера"}), 500
+
+
+# Авторизация
+@app.post("/login")
+def login():
+    try:
+        data = request.get_json()
+
+        if not data or "login" not in data or "password" not in data:
+            return jsonify({"error": "Нужны login и password"}), 400
+
+        login = data["login"].strip()
+        password = data["password"]
+
+        with db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT id, password_hash FROM users WHERE login = %s",
+                (login,)
+            )
+            user = cur.fetchone()
+
+        if not user:
+            return jsonify({"error": "Неверный логин или пароль"}), 401
+
+        user_id, password_hash = user
+
+        if not check_password_hash(password_hash, password):
+            return jsonify({"error": "Неверный логин или пароль"}), 401
+
+        # Сохраняем id пользователя в сессии → он теперь авторизован
+        session["user_id"] = user_id
+
+        return jsonify({"message": "Авторизация успешна", "user_id": user_id}), 200
+
+    except Exception:
+        return jsonify({"error": "Внутренняя ошибка сервера"}), 500
+
+
+# 1. Клиент отправляет HTTP запрос /add_operation с телом в формате JSON. 
+# Тело запрос содержит: тип операции (расход/доход), идентификатор пользователя, сумма операции в рублях, дата операции в рублях.
+@app.post("/add_operation")
+def add_operation():
+    try:
+        # 2. Backend проверяет что пользователь существует и авторизован
+        if "user_id" not in session:
+            return jsonify({"error": "Пользователь не авторизован"}), 401
+
+        data = request.get_json()
+
+        # Проверяем, что пришли нужные поля
+        if not data:
+            return jsonify({"error": "Тело запроса пустое"}), 400
+
+        required = ["type_operation", "chat_id", "sum", "date"]
+        for field in required:
+            if field not in data:
+                return jsonify({"error": f"Нужно поле {field}"}), 400
+
+        type_operation = data["type_operation"].strip().upper()
+        chat_id = data["chat_id"]
+        sum_value = data["sum"]
+        date = data["date"]
+
+        # Проверка типа операции
+        if type_operation not in ("ДОХОД", "РАСХОД"):
+            return jsonify({"error": "type_operation должен быть ДОХОД или РАСХОД"}), 400
+
+        # Проверка суммы
+        try:
+            sum_value = float(sum_value)
+            if sum_value <= 0:
+                return jsonify({"error": "sum должна быть положительным числом"}), 400
+        except (TypeError, ValueError):
+            return jsonify({"error": "sum должна быть числом"}), 400
+
+        with db() as conn:
+            cur = conn.cursor()
+
+            # Проверяем, что пользователь существует
+            cur.execute("SELECT 1 FROM users WHERE id = %s", (chat_id,))
+            if not cur.fetchone():
+                return jsonify({"error": "Пользователь не найден"}), 404
+
+            # 3. Backend сохраняет полученную информацию в БД
+            cur.execute(
+                """
+                INSERT INTO operations (date, sum, chat_id, type_operation)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (date, sum_value, chat_id, type_operation)
+            )
+            conn.commit()
+
+        # 4. Backend формирует ответ 200 OK
+        return jsonify({"message": "Операция добавлена"}), 200
+
+    except Exception:
         return jsonify({"error": "Внутренняя ошибка сервера"}), 500
 
 
