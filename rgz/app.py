@@ -1,13 +1,37 @@
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, render_template, redirect, url_for, flash, session
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = "super-secret-key"   # нужен для работы сессий
+app.secret_key = "super-secret-key"
 
-# 1.1. Создание Базы Данных Posgres
-# Подключение к базе
+# Flask-Login
+login_manager = LoginManager()
+login_manager.login_view = "login"
+login_manager.init_app(app)
+
+
+# Класс пользователя для Flask-Login
+class User(UserMixin):
+    def __init__(self, id, login):
+        self.id = id
+        self.login = login
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    with db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT id, login FROM users WHERE id = %s", (user_id,))
+        row = cur.fetchone()
+        if row:
+            return User(row[0], row[1])
+    return None
+
+
+# 1.1 Подключение к БД 
 def db(database="finance_db"):
     return psycopg2.connect(
         dbname=database,
@@ -32,7 +56,7 @@ cur.close()
 conn.close()
 
 
-# Создаём таблицы при запуске, если их ещё нет
+# Создаём таблицы при запуске
 with db() as conn:
     cur = conn.cursor()
 
@@ -50,10 +74,8 @@ with db() as conn:
         CREATE TABLE IF NOT EXISTS operations (
             id SERIAL PRIMARY KEY,
             date DATE NOT NULL,
-            sum NUMERIC(12, 2) NOT NULL
-                CHECK (sum > 0),
-            chat_id INTEGER NOT NULL
-                REFERENCES users(id) ON DELETE CASCADE,
+            sum NUMERIC(12, 2) NOT NULL CHECK (sum > 0),
+            chat_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             type_operation VARCHAR(10) NOT NULL
                 CHECK (type_operation IN ('ДОХОД', 'РАСХОД')),
             payment_method VARCHAR(20)
@@ -73,148 +95,105 @@ with db() as conn:
     print("Таблицы users и operations готовы")
 
 
+# 1.2. Регистрация
 # 1.2.1. Клиент отправляется запрос /reg с телом в JSON формате. Тело запроса должно содержать логин и пароль.
-@app.post("/reg")
+@app.route("/reg", methods=["GET", "POST"])
 def register():
-    try:
-        data = request.get_json()
-
-        # Проверяем, что пришли поля login и password
-        if not data or "login" not in data or "password" not in data:
-            return jsonify({"error": "Нужны login и password"}), 400
-
-        login = data["login"].strip()
-        password = data["password"]
+    if request.method == "POST":
+        login = request.form.get("login", "").strip()
+        password = request.form.get("password", "")
 
         if not login or not password:
-            return jsonify({"error": "login и password не могут быть пустыми"}), 400
+            flash("Заполните все поля", "error")
+            return render_template("register.html")
 
         # Хешируем пароль
         password_hash = generate_password_hash(password)
+        
+        try:
+            with db() as conn:
+                cur = conn.cursor()
 
-        with db() as conn:
-            cur = conn.cursor()
+                # 1.2.2. Backend проверяет, что пользователь не зарегистрирован
+                cur.execute("SELECT 1 FROM users WHERE login = %s", (login,))
+                if cur.fetchone():
+                    flash("Пользователь уже зарегистрирован", "error")
+                    return render_template("register.html")
 
-            # 1.2.2. Backend проверяет, что пользователь не зарегистрирован
-            cur.execute("SELECT 1 FROM users WHERE login = %s", (login,))
-            if cur.fetchone():
-                return jsonify({"error": "Пользователь уже зарегистрирован"}), 409
+                # 1.2.3. Backend сохраняет логин и пароль (в виде хэша) в БД
+                cur.execute(
+                    "INSERT INTO users (login, password_hash) VALUES (%s, %s)",
+                    (login, password_hash)
+                )
+                conn.commit()
 
-            # 1.2.3. Backend сохраняет логин и пароль (в виде хэша) в БД
-            cur.execute(
-                """
-                INSERT INTO users (login, password_hash)
-                VALUES (%s, %s)
-                """,
-                (login, password_hash)
-            )
-            conn.commit()
+            # 1.2.4. Успешный ответ
+            flash("Регистрация успешна! Теперь войдите.", "success")
+            return redirect(url_for("login"))
 
-        # 1.2.4. Успешный ответ
-        return jsonify({"message": "Регистрация успешна"}), 200
+        except Exception:
+            # 1.2.5. Любая ошибка: 500
+            flash("Внутренняя ошибка сервера", "error")
+            return render_template("register.html")
 
-    except Exception:
-        # 1.2.5. Любая ошибка: 500
-        return jsonify({"error": "Внутренняя ошибка сервера"}), 500
+    return render_template("register.html")
 
 
 # Авторизация
-@app.post("/login")
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    try:
-        data = request.get_json()
+    if request.method == "POST":
+        login = request.form.get("login", "").strip()
+        password = request.form.get("password", "")
 
-        if not data or "login" not in data or "password" not in data:
-            return jsonify({"error": "Нужны login и password"}), 400
-
-        login = data["login"].strip()
-        password = data["password"]
+        if not login or not password:
+            flash("Заполните все поля", "error")
+            return render_template("login.html")
 
         with db() as conn:
             cur = conn.cursor()
             cur.execute(
-                "SELECT id, password_hash FROM users WHERE login = %s",
+                "SELECT id, login, password_hash FROM users WHERE login = %s",
                 (login,)
             )
-            user = cur.fetchone()
+            user_data = cur.fetchone()
 
-        if not user:
-            return jsonify({"error": "Неверный логин или пароль"}), 401
+        if not user_data:
+            flash("Неверный логин или пароль", "error")
+            return render_template("login.html")
 
-        user_id, password_hash = user
+        user_id, user_login, password_hash = user_data
 
         if not check_password_hash(password_hash, password):
-            return jsonify({"error": "Неверный логин или пароль"}), 401
+            flash("Неверный логин или пароль", "error")
+            return render_template("login.html")
 
-        # Сохраняем id пользователя в сессии → он теперь авторизован
-        session["user_id"] = user_id
+        user = User(user_id, user_login)
+        login_user(user)
+        return redirect(url_for("index"))
 
-        return jsonify({"message": "Авторизация успешна", "user_id": user_id}), 200
-
-    except Exception:
-        return jsonify({"error": "Внутренняя ошибка сервера"}), 500
+    return render_template("login.html")
 
 
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for("login"))
+
+
+# Главная страница
+@app.route("/")
+def index():
+    if current_user.is_authenticated:
+        return render_template("index.html")
+    return redirect(url_for("login"))
+
+
+# 1.3 Добавление новой операции 
 # 1. Клиент отправляет HTTP запрос /add_operation с телом в формате JSON. 
 # Тело запрос содержит: тип операции (расход/доход), идентификатор пользователя, сумма операции в рублях, дата операции в рублях.
-@app.post("/add_operation")
-def add_operation():
-    try:
-        # 2. Backend проверяет что пользователь существует и авторизован
-        if "user_id" not in session:
-            return jsonify({"error": "Пользователь не авторизован"}), 401
 
-        data = request.get_json()
-
-        # Проверяем, что пришли нужные поля
-        if not data:
-            return jsonify({"error": "Тело запроса пустое"}), 400
-
-        required = ["type_operation", "chat_id", "sum", "date"]
-        for field in required:
-            if field not in data:
-                return jsonify({"error": f"Нужно поле {field}"}), 400
-
-        type_operation = data["type_operation"].strip().upper()
-        chat_id = data["chat_id"]
-        sum_value = data["sum"]
-        date = data["date"]
-
-        # Проверка типа операции
-        if type_operation not in ("ДОХОД", "РАСХОД"):
-            return jsonify({"error": "type_operation должен быть ДОХОД или РАСХОД"}), 400
-
-        # Проверка суммы
-        try:
-            sum_value = float(sum_value)
-            if sum_value <= 0:
-                return jsonify({"error": "sum должна быть положительным числом"}), 400
-        except (TypeError, ValueError):
-            return jsonify({"error": "sum должна быть числом"}), 400
-
-        with db() as conn:
-            cur = conn.cursor()
-
-            # Проверяем, что пользователь существует
-            cur.execute("SELECT 1 FROM users WHERE id = %s", (chat_id,))
-            if not cur.fetchone():
-                return jsonify({"error": "Пользователь не найден"}), 404
-
-            # 3. Backend сохраняет полученную информацию в БД
-            cur.execute(
-                """
-                INSERT INTO operations (date, sum, chat_id, type_operation)
-                VALUES (%s, %s, %s, %s)
-                """,
-                (date, sum_value, chat_id, type_operation)
-            )
-            conn.commit()
-
-        # 4. Backend формирует ответ 200 OK
-        return jsonify({"message": "Операция добавлена"}), 200
-
-    except Exception:
-        return jsonify({"error": "Внутренняя ошибка сервера"}), 500
 
 
 if __name__ == "__main__":
