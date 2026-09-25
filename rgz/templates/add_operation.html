@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Добавить операцию{% endblock %}
+
+{% block content %}
+<h2>Добавить операцию</h2>
+<form method="post">
+    <label>Тип операции:</label>
+    <select name="type_operation" required>
+        <option value="ДОХОД">ДОХОД</option>
+        <option value="РАСХОД">РАСХОД</option>
+    </select>
+
+    <label>Сумма:</label>
+    <input type="number" name="sum" step="0.01" min="0.01" required>
+
+    <label>Дата:</label>
+    <input type="date" name="date" required>
+
+    <button type="submit">Добавить</button>
+</form>
+{% endblock %}

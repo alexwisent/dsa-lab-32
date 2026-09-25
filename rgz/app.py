@@ -95,21 +95,37 @@ with db() as conn:
     print("Таблицы users и operations готовы")
 
 
+# Главная страница
+@app.route("/")
+def index():
+    if current_user.is_authenticated:
+        return render_template("index.html")
+    return redirect(url_for("login"))
+
+
 # 1.2. Регистрация
 # 1.2.1. Клиент отправляется запрос /reg с телом в JSON формате. Тело запроса должно содержать логин и пароль.
 @app.route("/reg", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        login = request.form.get("login", "").strip()
-        password = request.form.get("password", "")
+        # Поддерживаем JSON (по заданию) и форму (для Jinja)
+        if request.is_json:
+            data = request.get_json()
+            login = data.get("login", "").strip() if data else ""
+            password = data.get("password", "") if data else ""
+        else:
+            login = request.form.get("login", "").strip()
+            password = request.form.get("password", "")
 
         if not login or not password:
+            if request.is_json:
+                return jsonify({"error": "Нужны login и password"}), 400
             flash("Заполните все поля", "error")
             return render_template("register.html")
 
         # Хешируем пароль
         password_hash = generate_password_hash(password)
-        
+
         try:
             with db() as conn:
                 cur = conn.cursor()
@@ -117,6 +133,8 @@ def register():
                 # 1.2.2. Backend проверяет, что пользователь не зарегистрирован
                 cur.execute("SELECT 1 FROM users WHERE login = %s", (login,))
                 if cur.fetchone():
+                    if request.is_json:
+                        return jsonify({"error": "Пользователь уже зарегистрирован"}), 409
                     flash("Пользователь уже зарегистрирован", "error")
                     return render_template("register.html")
 
@@ -128,11 +146,16 @@ def register():
                 conn.commit()
 
             # 1.2.4. Успешный ответ
+            if request.is_json:
+                return jsonify({"message": "Регистрация успешна"}), 200
+
             flash("Регистрация успешна! Теперь войдите.", "success")
             return redirect(url_for("login"))
 
         except Exception:
             # 1.2.5. Любая ошибка: 500
+            if request.is_json:
+                return jsonify({"error": "Внутренняя ошибка сервера"}), 500
             flash("Внутренняя ошибка сервера", "error")
             return render_template("register.html")
 
@@ -182,17 +205,6 @@ def logout():
     return redirect(url_for("login"))
 
 
-# Главная страница
-@app.route("/")
-def index():
-    if current_user.is_authenticated:
-        return render_template("index.html")
-    return redirect(url_for("login"))
-
-
-# 1.3 Добавление новой операции 
-# 1. Клиент отправляет HTTP запрос /add_operation с телом в формате JSON. 
-# Тело запрос содержит: тип операции (расход/доход), идентификатор пользователя, сумма операции в рублях, дата операции в рублях.
 
 
 
